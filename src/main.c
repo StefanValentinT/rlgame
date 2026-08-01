@@ -53,8 +53,7 @@ int main(void)
 	if (!reload_libplug())
 		return EXIT_FAILURE;
 
-	Args args = (Args){true};
-	plug_init(&plug, &args);
+	plug_init(&plug, false);
 
 	while (!plug_should_exit(&plug))
 	{

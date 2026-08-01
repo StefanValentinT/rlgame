@@ -13,12 +13,7 @@ typedef struct
 	bool locked;
 } Plug;
 
-typedef struct
-{
-	bool debug;
-} Args;
-
-typedef void (*plug_init_fun)(Plug *plug, Args *args);
+typedef void (*plug_init_fun)(Plug *plug, bool release);
 typedef void (*plug_update_fun)(Plug *plug);
 typedef bool (*plug_should_exit_fun)(Plug *plug);
 typedef bool (*plug_should_reload_fun)(Plug *plug);
@@ -28,11 +23,14 @@ typedef void (*plug_exit_fun)(Plug *plug);
 #if __INCLUDE_LEVEL__ == 0
 
 #include "rl/raylib.h"
+#include "rl/rcamera.h"
 #include <stdio.h>
+
+#include "camera.c"
 
 Color sky_color = (Color){60, 150, 235, 255};
 
-void plug_init(Plug *plug, Args *args)
+void plug_init(Plug *plug, bool release)
 {
 	plug->pos = (Vector3){0.0f, 0.0f, 0.0f};
 
@@ -55,10 +53,9 @@ void plug_init(Plug *plug, Args *args)
 	Vector3 position = {0.0f, 0.0f, 0.0f};
 
 	int animCount = 0;
-	ModelAnimation *anims = LoadModelAnimations("res/goated.gltf", &animCount);
+	ModelAnimation *anims = LoadModelAnimations("res/dummy e.gltf", &animCount);
 
-	if (args)
-		printf("%i \n", animCount);
+	printf("%i \n", animCount);
 
 	unsigned int animIndex = 0;
 	unsigned int animCurrentFrame = 0;
@@ -83,17 +80,21 @@ void unlock_cursor(Plug *plug)
 	EnableCursor();
 }
 
-void plug_update(Plug *plug)
+void update_controls(Plug *plug)
 {
-	if (plug->locked)
-	{
-		UpdateCamera(&plug->camera, CAMERA_FIRST_PERSON);
-	}
+	Vector2 mousePositionDelta = GetMouseDelta();
 
 	if (IsKeyPressed(KEY_ESCAPE) && plug->locked == true)
 		unlock_cursor(plug);
 	if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && plug->locked == false)
 		lock_cursor(plug);
+
+	update_camera(&plug->camera, plug->locked);
+}
+
+void plug_update(Plug *plug)
+{
+	update_controls(plug);
 
 	BeginDrawing();
 
@@ -114,5 +115,23 @@ bool plug_should_exit(Plug *plug) { return WindowShouldClose(); }
 bool plug_should_reload(Plug *plug) { return IsKeyPressed(KEY_H); }
 
 void plug_exit(Plug *plug) { CloseWindow(); }
+
+#ifdef RELEASE
+
+Plug plug = {0};
+
+int main(void)
+{
+	plug_init(&plug, true);
+
+	while (!plug_should_exit(&plug))
+	{
+		plug_update(&plug);
+	}
+
+	plug_exit(&plug);
+}
+
+#endif
 
 #endif
