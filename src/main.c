@@ -11,6 +11,7 @@ plug_init_fun plug_init = NULL;
 plug_update_fun plug_update = NULL;
 plug_should_exit_fun plug_should_exit = NULL;
 plug_should_reload_fun plug_should_reload = NULL;
+plug_on_hot_reload_fun plug_on_hot_reload = NULL;
 plug_exit_fun plug_exit = NULL;
 Plug plug = {0};
 
@@ -35,14 +36,16 @@ bool reload_libplug(void)
 
 	if (libplug == NULL)
 	{
-		fprintf(stderr, "Error: Could not load %s:\n %s", libplug_file,
-		        dlerror());
+		fprintf(
+		    stderr, "Error: Could not load %s:\n %s", libplug_file, dlerror()
+		);
 	}
 
 	plug_init = load_function(libplug, "plug_init", &err);
 	plug_update = load_function(libplug, "plug_update", &err);
 	plug_should_exit = load_function(libplug, "plug_should_exit", &err);
 	plug_should_reload = load_function(libplug, "plug_should_reload", &err);
+	plug_on_hot_reload = load_function(libplug, "plug_on_hot_reload", &err);
 	plug_exit = load_function(libplug, "plug_exit", &err);
 
 	return !err;
@@ -62,8 +65,11 @@ int main(void)
 			if (!reload_libplug())
 				return EXIT_FAILURE;
 			else
-				printf(
-				    "Sucessfully reloaded application with current state.\n");
+			{
+				plug_on_hot_reload(&plug);
+				printf("Sucessfully reloaded application with current state.\n"
+				);
+			}
 		}
 
 		plug_update(&plug);

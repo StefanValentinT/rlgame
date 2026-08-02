@@ -3,7 +3,7 @@
 
 #include "rl/raylib.h"
 
-void update_camera(Camera *cam, bool locked);
+void update_camera(Camera *cam, bool locked, Vector2 mouse_delta);
 
 #endif
 #if __INCLUDE_LEVEL__ == 0
@@ -14,9 +14,8 @@ void update_camera(Camera *cam, bool locked);
 float camera_move_speed = 0.1f;
 float camera_mouse_move_sensitivity = 0.003f;
 
-void update_camera(Camera *camera, bool locked)
+void update_camera(Camera *camera, bool locked, Vector2 mouse_delta)
 {
-	Vector2 mousePositionDelta = GetMouseDelta();
 	bool moveInWorldPlane = true;
 	if (IsKeyDown(KEY_W))
 		CameraMoveForward(camera, camera_move_speed, moveInWorldPlane);
@@ -33,11 +32,13 @@ void update_camera(Camera *camera, bool locked)
 
 	if (locked)
 	{
-		CameraYaw(camera, -mousePositionDelta.x * camera_mouse_move_sensitivity,
-		          false);
-		CameraPitch(camera,
-		            -mousePositionDelta.y * camera_mouse_move_sensitivity,
-		            false, false, false);
+		CameraYaw(
+		    camera, -mouse_delta.x * camera_mouse_move_sensitivity, false
+		);
+		CameraPitch(
+		    camera, -mouse_delta.y * camera_mouse_move_sensitivity, false,
+		    false, false
+		);
 	}
 }
 

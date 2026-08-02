@@ -10,6 +10,8 @@ typedef struct
 	size_t version;
 	Vector3 pos;
 	Camera camera;
+	Texture2D texture;
+	Model model;
 	bool locked;
 } Plug;
 
@@ -17,6 +19,7 @@ typedef void (*plug_init_fun)(Plug *plug, bool release);
 typedef void (*plug_update_fun)(Plug *plug);
 typedef bool (*plug_should_exit_fun)(Plug *plug);
 typedef bool (*plug_should_reload_fun)(Plug *plug);
+typedef void (*plug_on_hot_reload_fun)(Plug *plug);
 typedef void (*plug_exit_fun)(Plug *plug);
 
 #endif
@@ -27,6 +30,7 @@ typedef void (*plug_exit_fun)(Plug *plug);
 #include <stdio.h>
 
 #include "camera.c"
+#include "resources.c"
 
 Color sky_color = (Color){60, 150, 235, 255};
 
@@ -37,8 +41,9 @@ void plug_init(Plug *plug, bool release)
 	const int screenWidth = 800;
 	const int screenHeight = 450;
 
-	InitWindow(screenWidth, screenHeight,
-	           "raylib [models] example - loading gltf");
+	InitWindow(
+	    screenWidth, screenHeight, "raylib [models] example - loading gltf"
+	);
 
 	Camera camera = {0};
 	camera.position = (Vector3){6.0f, 6.0f, 6.0f};
@@ -49,16 +54,12 @@ void plug_init(Plug *plug, bool release)
 
 	plug->camera = camera;
 
-	Model model = LoadModel("res/goated.gltf");
-	Vector3 position = {0.0f, 0.0f, 0.0f};
+	plug->texture = load_texture();
 
-	int animCount = 0;
-	ModelAnimation *anims = LoadModelAnimations("res/dummy e.gltf", &animCount);
+	Model model = LoadModelFromMesh(GenMeshCube(2.0f, 2.0f, 2.0f));
+	model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = plug->texture;
 
-	printf("%i \n", animCount);
-
-	unsigned int animIndex = 0;
-	unsigned int animCurrentFrame = 0;
+	plug->model = model;
 
 	SetTargetFPS(60);
 
@@ -66,6 +67,16 @@ void plug_init(Plug *plug, bool release)
 	plug->locked = true;
 
 	SetExitKey(0);
+}
+
+void plug_on_hot_reload(Plug *plug)
+{
+	plug->texture = load_texture();
+
+	Model model = LoadModelFromMesh(GenMeshCube(2.0f, 2.0f, 2.0f));
+	model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = plug->texture;
+
+	plug->model = model;
 }
 
 void lock_cursor(Plug *plug)
@@ -82,14 +93,27 @@ void unlock_cursor(Plug *plug)
 
 void update_controls(Plug *plug)
 {
-	Vector2 mousePositionDelta = GetMouseDelta();
-
+	bool just_locked = false;
 	if (IsKeyPressed(KEY_ESCAPE) && plug->locked == true)
+	{
 		unlock_cursor(plug);
+	}
 	if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && plug->locked == false)
+	{
 		lock_cursor(plug);
+		just_locked = true;
+	}
 
-	update_camera(&plug->camera, plug->locked);
+	Vector2 mouse_position_delta;
+	if (plug->locked && !just_locked)
+	{
+		mouse_position_delta = GetMouseDelta();
+	}
+	else
+	{
+		mouse_position_delta = (Vector2){0.0f, 0.0f};
+	}
+	update_camera(&plug->camera, plug->locked, mouse_position_delta);
 }
 
 void plug_update(Plug *plug)
@@ -102,10 +126,19 @@ void plug_update(Plug *plug)
 
 	BeginMode3D(plug->camera);
 
-	DrawCube(plug->pos, 2.0f, 2.0f, 2.0f, RED);
+	// DrawCube(plug->pos, 2.0f, 2.0f, 2.0f, RED);
+	DrawCubeWires(plug->pos, 2.01f, 2.01f, 2.01f, BLACK);
+	DrawModel(plug->model, (Vector3){0.0f, 0.0f, 0.0f}, 1.0, WHITE);
+
+	// DrawTexture(plug->texture, 3.0f, 3.0f, WHITE);
+
 	DrawGrid(10, 1.0f);
 
 	EndMode3D();
+
+	DrawRectangle(0, 0, 90, 35, RAYWHITE);
+	DrawTexture(plug->texture, 50.0f, 50.0f, WHITE);
+	DrawFPS(10, 10);
 
 	EndDrawing();
 }
